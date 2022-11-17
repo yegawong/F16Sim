@@ -1,4 +1,4 @@
-import math
+import torch
 
 def atmos(alt, vt):
     rho0 = 2.377e-3
@@ -7,7 +7,7 @@ def atmos(alt, vt):
     if alt >= 35000.0:
         temp=390
     rho=rho0*pow(tfac,4.14)
-    mach = (vt)/math.sqrt(1.4*1716.3*temp)
+    mach = (vt)/torch.sqrt(1.4*1716.3*temp)
     qbar = .5*rho*pow(vt,2)
     ps   = 1715.0*rho*temp
 
@@ -18,19 +18,19 @@ def atmos(alt, vt):
 
 def accels(state, xdot):
     grav = 32.174
-    sina = math.sin(state[7])
-    cosa = math.cos(state[7])
-    sinb = math.sin(state[8])
-    cosb = math.cos(state[8])
+    sina = torch.sin(state[7])
+    cosa = torch.cos(state[7])
+    sinb = torch.sin(state[8])
+    cosb = torch.cos(state[8])
     vel_u = state[6]*cosb*cosa
     vel_v = state[6]*sinb
     vel_w = state[6]*cosb*sina
     u_dot = cosb*cosa*xdot[6] - state[6]*sinb*cosa*xdot[8] - state[6]*cosb*sina*xdot[7]
     v_dot = sinb*xdot[6] + state[6]*cosb*xdot[8]
     w_dot = cosb*sina*xdot[6] - state[6]*sinb*sina*xdot[8] + state[6]*cosb*cosa*xdot[7]
-    nx_cg = 1.0/grav*(u_dot + state[10]*vel_w - state[11]*vel_v) + math.sin(state[4])
-    ny_cg = 1.0/grav*(v_dot + state[11]*vel_u - state[9]*vel_w) - math.cos(state[4])*math.sin(state[3])
-    nz_cg = -1.0/grav*(w_dot + state[9]*vel_v - state[10]*vel_u) + math.cos(state[4])*math.cos(state[3])
+    nx_cg = 1.0/grav*(u_dot + state[10]*vel_w - state[11]*vel_v) + torch.sin(state[4])
+    ny_cg = 1.0/grav*(v_dot + state[11]*vel_u - state[9]*vel_w) - torch.cos(state[4])*torch.sin(state[3])
+    nz_cg = -1.0/grav*(w_dot + state[9]*vel_v - state[10]*vel_u) + torch.cos(state[4])*torch.cos(state[3])
     return (nx_cg, ny_cg, nz_cg)
 
 def nlplant_(xu):
@@ -44,7 +44,7 @@ def nlplant_(xu):
     xcg  = 0.30
 
     Heng = 0.0
-    pi   = math.pi
+    pi   = torch.pi
 
     Jy  = 55814.0
     Jxz = 982.0
@@ -71,19 +71,19 @@ def nlplant_(xu):
     Q     = xu[10]
     R     = xu[11]
 
-    sa    = math.sin(xu[7])
-    ca    = math.cos(xu[7])
-    sb    = math.sin(xu[8])
-    cb    = math.cos(xu[8])
-    tb    = math.tan(xu[8])
+    sa    = torch.sin(xu[7])
+    ca    = torch.cos(xu[7])
+    sb    = torch.sin(xu[8])
+    cb    = torch.cos(xu[8])
+    tb    = torch.tan(xu[8])
 
-    st    = math.sin(theta)
-    ct    = math.cos(theta)
-    tt    = math.tan(theta)
-    sphi  = math.sin(phi)
-    cphi  = math.cos(phi)
-    spsi  = math.sin(psi)
-    cpsi  = math.cos(psi)
+    st    = torch.sin(theta)
+    ct    = torch.cos(theta)
+    tt    = torch.tan(theta)
+    sphi  = torch.sin(phi)
+    cphi  = torch.cos(phi)
+    spsi  = torch.sin(psi)
+    cpsi  = torch.cos(psi)
 
     if vt <= 0.01 : vt = 0.01
 

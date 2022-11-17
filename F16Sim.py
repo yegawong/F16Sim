@@ -111,4 +111,5 @@ if __name__ == '__main__':
     parameters = " 14.3842921301 0.0 999.240528869 0.0 0.0680626236787 0.0 100.08096494 0.121545455798 0.0 0.0 -0.031583522788 0.0 20000.0 0.0 0.0 0.0 0.0 1.0"
     data = list(map(float, parameters.strip().split(' ')))
     main(data)
+    print(data)
     print(xdot)
