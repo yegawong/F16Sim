@@ -1,6 +1,8 @@
 import torch
+import copy
 
 def atmos(alt, vt):
+    # 根据高度和速度计算动压、马赫数
     rho0 = 2.377e-3
     tfac =1 - .703e-5*(alt)
     temp = 519.0*tfac
@@ -17,24 +19,25 @@ def atmos(alt, vt):
     return (mach, qbar, ps)
 
 def accels(state, xdot):
+    # 根据飞行状态结算三轴过载
     grav = 32.174
-    sina = torch.sin(state[7])
-    cosa = torch.cos(state[7])
-    sinb = torch.sin(state[8])
-    cosb = torch.cos(state[8])
-    vel_u = state[6]*cosb*cosa
-    vel_v = state[6]*sinb
-    vel_w = state[6]*cosb*sina
-    u_dot = cosb*cosa*xdot[6] - state[6]*sinb*cosa*xdot[8] - state[6]*cosb*sina*xdot[7]
-    v_dot = sinb*xdot[6] + state[6]*cosb*xdot[8]
-    w_dot = cosb*sina*xdot[6] - state[6]*sinb*sina*xdot[8] + state[6]*cosb*cosa*xdot[7]
-    nx_cg = 1.0/grav*(u_dot + state[10]*vel_w - state[11]*vel_v) + torch.sin(state[4])
-    ny_cg = 1.0/grav*(v_dot + state[11]*vel_u - state[9]*vel_w) - torch.cos(state[4])*torch.sin(state[3])
-    nz_cg = -1.0/grav*(w_dot + state[9]*vel_v - state[10]*vel_u) + torch.cos(state[4])*torch.cos(state[3])
+    sina = torch.sin(state[:,7])
+    cosa = torch.cos(state[:,7])
+    sinb = torch.sin(state[:,8])
+    cosb = torch.cos(state[:,8])
+    vel_u = state[:,6]*cosb*cosa
+    vel_v = state[:,6]*sinb
+    vel_w = state[:,6]*cosb*sina
+    u_dot = cosb*cosa*xdot[:,6] - state[:,6]*sinb*cosa*xdot[:,8] - state[:,6]*cosb*sina*xdot[:,7]
+    v_dot = sinb*xdot[:,6] + state[:,6]*cosb*xdot[:,8]
+    w_dot = cosb*sina*xdot[:,6] - state[:,6]*sinb*sina*xdot[:,8] + state[:,6]*cosb*cosa*xdot[:,7]
+    nx_cg = 1.0/grav*(u_dot + state[:,10]*vel_w - state[:,11]*vel_v) + torch.sin(state[:,4])
+    ny_cg = 1.0/grav*(v_dot + state[:,11]*vel_u - state[:,9]*vel_w) - torch.cos(state[:,4])*torch.sin(state[:,3])
+    nz_cg = -1.0/grav*(w_dot + state[:,9]*vel_v - state[:,10]*vel_u) + torch.cos(state[:,4])*torch.cos(state[:,3])
     return (nx_cg, ny_cg, nz_cg)
 
 def nlplant_(xu):
-    xdot = [None] * 18
+    xdot = copy.deepcopy(xu)
     g    = 32.17 
     m    = 636.94 
     B    = 30.0
@@ -57,25 +60,25 @@ def nlplant_(xu):
     ##         States
     ##     %%%%%%%%%%%%%%%%%%% */
 
-    npos  = xu[0]
-    epos  = xu[1]
-    alt   = xu[2]
-    phi   = xu[3]
-    theta = xu[4]
-    psi   = xu[5]
+    npos  = xu[:,0]
+    epos  = xu[:,1]
+    alt   = xu[:,2]
+    phi   = xu[:,3]
+    theta = xu[:,4]
+    psi   = xu[:,5]
 
-    vt    = xu[6]
-    alpha = xu[7]*r2d
-    beta  = xu[8]*r2d
-    P     = xu[9]
-    Q     = xu[10]
-    R     = xu[11]
+    vt    = xu[:,6]
+    alpha = xu[:,7]*r2d
+    beta  = xu[:,8]*r2d
+    P     = xu[:,9]
+    Q     = xu[:,10]
+    R     = xu[:,11]
 
-    sa    = torch.sin(xu[7])
-    ca    = torch.cos(xu[7])
-    sb    = torch.sin(xu[8])
-    cb    = torch.cos(xu[8])
-    tb    = torch.tan(xu[8])
+    sa    = torch.sin(xu[:,7])
+    ca    = torch.cos(xu[:,7])
+    sb    = torch.sin(xu[:,8])
+    cb    = torch.cos(xu[:,8])
+    tb    = torch.tan(xu[:,8])
 
     st    = torch.sin(theta)
     ct    = torch.cos(theta)
@@ -91,13 +94,13 @@ def nlplant_(xu):
     ## Control inputs
     ## %%%%%%%%%%%%%%%%%%% */
 
-    T     = xu[12]
-    el    = xu[13]
-    ail   = xu[14]
-    rud   = xu[15]
-    lef   = xu[16]
+    T     = xu[:,12]
+    el    = xu[:,13]
+    ail   = xu[:,14]
+    rud   = xu[:,15]
+    lef   = xu[:,16]
 
-    fi_flag = xu[17]/1
+    fi_flag = xu[:,17]/1
 
     dail  = ail/21.5
     drud  = rud/30.0
@@ -127,14 +130,14 @@ def nlplant_(xu):
     V = vt*sb
     W = vt*sa*cb
 
-    xdot[0] = U*(ct*cpsi) + V*(sphi*cpsi*st - cphi*spsi) + W*(cphi*st*cpsi + sphi*spsi)
-    xdot[1] = U*(ct*spsi) + V*(sphi*spsi*st + cphi*cpsi) + W*(cphi*st*spsi - sphi*cpsi)
-    xdot[2] = U*st - V*(sphi*ct) - W*(cphi*ct)
-    xdot[3] = P + tt*(Q*sphi + R*cphi)
-    xdot[4] = Q*cphi - R*sphi
-    xdot[5] = (Q*sphi + R*cphi)/ct
+    xdot[:,0] = U*(ct*cpsi) + V*(sphi*cpsi*st - cphi*spsi) + W*(cphi*st*cpsi + sphi*spsi)
+    xdot[:,1] = U*(ct*spsi) + V*(sphi*spsi*st + cphi*cpsi) + W*(cphi*st*spsi - sphi*cpsi)
+    xdot[:,2] = U*st - V*(sphi*ct) - W*(cphi*ct)
+    xdot[:,3] = P + tt*(Q*sphi + R*cphi)
+    xdot[:,4] = Q*cphi - R*sphi
+    xdot[:,5] = (Q*sphi + R*cphi)/ct
 
-    if fi_flag == 1:
+    if 1 == 1:
         from hifi_F16_AeroData import hifi_C, hifi_damping, hifi_C_lef, \
             hifi_damping_lef, hifi_rudder, hifi_ailerons, hifi_other_coeffs
         temp = hifi_C(alpha,beta,el)
@@ -279,23 +282,23 @@ def nlplant_(xu):
     Udot = R*V - Q*W - g*st + qbar*S*Cx_tot/m + T/m
     Vdot = P*W - R*U + g*ct*sphi + qbar*S*Cy_tot/m
     Wdot = Q*U - P*V + g*ct*cphi + qbar*S*Cz_tot/m
-    xdot[6] = (U*Udot + V*Vdot + W*Wdot)/vt
-    xdot[7] = (U*Wdot - W*Udot)/(U*U + W*W)
-    xdot[8] = (Vdot*vt - V*xdot[6])/(vt*vt*cb)
+    xdot[:,6] = (U*Udot + V*Vdot + W*Wdot)/vt
+    xdot[:,7] = (U*Wdot - W*Udot)/(U*U + W*W)
+    xdot[:,8] = (Vdot*vt - V*xdot[:,6])/(vt*vt*cb)
     L_tot = Cl_tot*qbar*S*B
     M_tot = Cm_tot*qbar*S*cbar
     N_tot = Cn_tot*qbar*S*B
     denom = Jx*Jz - Jxz*Jxz
-    xdot[9] =  (Jz*L_tot + Jxz*N_tot - (Jz*(Jz-Jy)+Jxz*Jxz)*Q*R + Jxz*(Jx-Jy+Jz)*P*Q + Jxz*Q*Heng)/denom
-    xdot[10] = (M_tot + (Jz-Jx)*P*R - Jxz*(P*P-R*R) - R*Heng)/Jy
-    xdot[11] = (Jx*N_tot + Jxz*L_tot + (Jx*(Jx-Jy)+Jxz*Jxz)*P*Q - Jxz*(Jx-Jy+Jz)*Q*R +  Jx*Q*Heng)/denom
-    temp = accels(xu,xdot)
+    xdot[:,9] =  (Jz*L_tot + Jxz*N_tot - (Jz*(Jz-Jy)+Jxz*Jxz)*Q*R + Jxz*(Jx-Jy+Jz)*P*Q + Jxz*Q*Heng)/denom
+    xdot[:,10] = (M_tot + (Jz-Jx)*P*R - Jxz*(P*P-R*R) - R*Heng)/Jy
+    xdot[:,11] = (Jx*N_tot + Jxz*L_tot + (Jx*(Jx-Jy)+Jxz*Jxz)*P*Q - Jxz*(Jx-Jy+Jz)*Q*R +  Jx*Q*Heng)/denom
 
-    xdot[12]  = temp[0]
-    xdot[13]  = temp[1]
-    xdot[14]  = temp[2]
-    xdot[15]  = mach
-    xdot[16]  = qbar
-    xdot[17]  = ps
+    temp = accels(xu,xdot)
+    xdot[:,12]  = temp[0]
+    xdot[:,13]  = temp[1]
+    xdot[:,14]  = temp[2]
+    xdot[:,15]  = mach
+    xdot[:,16]  = qbar
+    xdot[:,17]  = ps
 
     return xdot

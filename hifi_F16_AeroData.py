@@ -1,3 +1,4 @@
+import torch
 from mexndinterp import interpn
 HIFI_GLOBAL_TXT_CONTENT = {}
 
@@ -22,7 +23,7 @@ def safe_read_dat(dat_name) -> list:
 def get_table(gain_params, ndinfo, dat_name):
     assert len(gain_params) == len(ndinfo)
     nDimension = len(ndinfo)
-    X = [None] * nDimension
+    X = [None] * nDimension 
     x = [None] * nDimension
     DATA = safe_read_dat(dat_name)
 

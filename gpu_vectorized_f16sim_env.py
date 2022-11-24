@@ -16,12 +16,12 @@ class F16SimDynamics(nn.Module):
     def __init__(self) -> None:
         super().__init__()
     
-    def compute_extended_state(self, u):
-        return nlplant_(u)
+    def compute_extended_state(self, s):
+        return nlplant_(s)
 
-    def forward(self, t, u):
-        es = self.compute_extended_state(u)
-        return es
+    def forward(self, t, s):
+        es = self.compute_extended_state(s)
+        return es[:, :18]
 
 class GPUVectorizedF16SimEnv:
     def __init__(self, preset_name, n, dt=0.01, solver="euler", device="cuda:0"):
@@ -36,6 +36,8 @@ class GPUVectorizedF16SimEnv:
         self.dt = dt
         self.solver = solver
         self.device = torch.device(device)
+
+        self.p = torch.zeros((n, 18), device=self.device)
         self.dynamics = None
         self.step_count = 0
         self.saved_data = []
@@ -56,18 +58,20 @@ class GPUVectorizedF16SimEnv:
         return self.n
 
     def reset(self):
-        self.s = torch.zeros((self.n, 18), device=self.device)
-        self.u = torch.tensor(INIT_U, device=self.device)
+        self.s = torch.zeros((self.n, 18), device=self.device) # state
+        self.u = torch.zeros((self.n, 18), device=self.device)
         self.dynamics = F16SimDynamics()
-        self.es = self.dynamics.compute_extended_state(self.u)
+        self.es = self.dynamics.compute_extended_state(self.s)
         self.step_count = 0
         self.saved_data = []
         return self.obs()
 
-    def step(self, u):
+    def step(self, s):
+        self.s = s
         self.dynamics = F16SimDynamics()
         self.s = odeint(self.dynamics, self.s, torch.tensor([0., self.dt], device=self.device), method=self.solver)[1, :, :]
-        self.es = self.dynamics.compute_extended_state(self.u)
+        self.es = self.dynamics.compute_extended_state(self.s)
+        #  #####[:, 12:18]
         self.step_count += 1
         obs, reward, done, info = self.obs(), self.reward(), self.done(), self.info()
         if torch.all(done) and self.saved_data:
@@ -94,8 +98,8 @@ if __name__ == '__main__':
     traj_rk = [env_rk.reset().cpu().numpy()]
     traj_rk8 = [env_rk8.reset().cpu().numpy()]
 
-    for i in range(600):
-        u = INIT_U
+    for i in range(10):
+        u = [INIT_U] * 1
         s_euler, _, _, _ = env_euler.step(torch.tensor(u, device=torch.device("cuda:0")))
         s_rk, _, _, _ = env_rk.step(torch.tensor(u, device=torch.device("cuda:0")))
         s_rk8, _, _, _ = env_rk8.step(torch.tensor(u, device=torch.device("cuda:0")))

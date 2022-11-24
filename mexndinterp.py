@@ -79,9 +79,11 @@ def interpn(X:list[list], Y:list, x:list, ndinfo:list):
     indexMatrix = getHyperCube(X,x,ndinfo)
     nVertices = 1<<nDimension
     T_val = [0.0] * nVertices
+    # print('++++++++++++++++++++++++++++++++++++++++')
     for i in range(nDimension):
         low  = indexMatrix[i][0]
         high = indexMatrix[i][1]
+        # print(xPoint, X, low, high)
         xPoint[i][0] = X[i][low]
         xPoint[i][1] = X[i][high]
     for i in range(nVertices):

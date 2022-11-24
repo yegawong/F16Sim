@@ -101,7 +101,7 @@ def dmomdcon(alpha, beta):
     m = m + 1
     n = n + 1
 
-    t = ALA[m-1][k-1]]
+    t = ALA[m-1][k-1]
     u = ALA[n-1][k-1]
     v = t + abs(da)*(ALA[m-1][L-1] - t)
     w = u + abs(da)*(ALA[n-1][L-1] - u)
